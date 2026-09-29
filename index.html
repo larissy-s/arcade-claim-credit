@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redirecting to Arcade Credit Claim...</title>
+  <script>
+    // TEST COPY: replace with your GitHub username and your test Gist ID.
+    const GIST_RAW = "https://gist.githubusercontent.com/larissy-s/6278679f62ed229fe0d1741c9b00aa02/raw";
+    const FALLBACK_SLUG = "google-cloud-benefits-not-available";
+    const CLAIM_BASE = "https://me.developers.google.com/benefits/claim/";
+
+    async function fetchText(file) {
+      const res = await fetch(`${GIST_RAW}/${file}?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`${file} fetch failed`);
+      return (await res.text()).trim();
+    }
+
+    // Outside a claim window: tell the user when the next link opens, in their own time zone.
+    function showNextWindow(nextIso) {
+      const msg = document.getElementById("msg");
+      if (nextIso === "none") {
+        msg.innerHTML = "<strong>This claim link has expired.</strong><br>The claim period has ended.";
+        return;
+      }
+      const next = new Date(nextIso);
+      const local = next.toLocaleString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+      });
+      const utc = next.toLocaleString("en-GB", {
+        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+      });
+      const mins = Math.max(0, Math.round((next - Date.now()) / 60000));
+      const wait = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}min` : `${mins} min`;
+      msg.innerHTML =
+        "<strong>This claim link has expired.</strong><br>" +
+        `The next link opens on <strong>${local}</strong> (${utc} UTC), in about ${wait}.<br>` +
+        "Come back to this same link from your lab at that time.";
+    }
+
+    async function routeToDailyEvent() {
+      try {
+        const slug = await fetchText("event.txt");
+        if (slug && slug !== FALLBACK_SLUG) {
+          window.location.replace(CLAIM_BASE + slug);
+          return;
+        }
+        const nextIso = await fetchText("next.txt");
+        if (nextIso === "none" || !isNaN(new Date(nextIso))) {
+          showNextWindow(nextIso);
+          return;
+        }
+        throw new Error("next.txt unreadable");
+      } catch (err) {
+        window.location.replace(CLAIM_BASE + FALLBACK_SLUG);
+      }
+    }
+
+    routeToDailyEvent();
+  </script>
+</head>
+<body style="font-family: sans-serif; text-align: center; margin-top: 60px; padding: 0 16px;">
+  <p id="msg">Connecting to Google Cloud benefits...</p>
+</body>
+</html>
