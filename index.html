@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Redirecting to Arcade Credit Claim...</title>
   <script>
-    // TEST COPY: replace with your GitHub username and your test Gist ID.
     const GIST_RAW = "https://gist.githubusercontent.com/larissy-s/6278679f62ed229fe0d1741c9b00aa02/raw";
     const FALLBACK_SLUG = "google-cloud-benefits-not-available";
     const CLAIM_BASE = "https://me.developers.google.com/benefits/claim/";
@@ -31,12 +30,32 @@
       const utc = next.toLocaleString("en-GB", {
         day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
       });
-      const mins = Math.max(0, Math.round((next - Date.now()) / 60000));
+      const msLeft = next - Date.now();
+      if (msLeft <= -15 * 60000) {
+        msg.innerHTML =
+          "<strong>The next claim link is delayed.</strong><br>" +
+          "Please try this same link again in a few minutes.";
+        return;
+      }
+      if (msLeft <= 0) {
+        // Opening time passed but the new link is not published yet (a few minutes at most).
+        msg.innerHTML =
+          "<strong>The next claim link is opening now.</strong><br>" +
+          "This page refreshes automatically, please keep it open.";
+        setTimeout(() => location.reload(), 30000);
+        return;
+      }
+      const mins = Math.max(1, Math.round(msLeft / 60000));
       const wait = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}min` : `${mins} min`;
       msg.innerHTML =
         "<strong>This claim link has expired.</strong><br>" +
         `The next link opens on <strong>${local}</strong> (${utc} UTC), in about ${wait}.<br>` +
         "Come back to this same link from your lab at that time.";
+      // Close to the opening: refresh by itself so the user is redirected without doing anything.
+      if (msLeft <= 15 * 60000) {
+        msg.innerHTML += "<br>This page refreshes automatically when it opens.";
+        setTimeout(() => location.reload(), msLeft + 20000);
+      }
     }
 
     async function routeToDailyEvent() {
